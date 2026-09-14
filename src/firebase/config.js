@@ -6,6 +6,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -19,11 +20,13 @@ const firebaseConfig = {
 let app;
 let auth;
 let db;
+let storage;
 
 if (firebaseConfig.apiKey) {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);
+  storage = getStorage(app);
 } else {
   // No .env.local present — this is the expected state for anyone
   // running the mock-data build without Firebase credentials. Don't
@@ -36,5 +39,5 @@ if (firebaseConfig.apiKey) {
   );
 }
 
-export { app, auth, db };
+export { app, auth, db, storage };
 export default firebaseConfig;

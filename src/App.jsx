@@ -3,6 +3,13 @@ import { useAuth } from './hooks/useAuth';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import CertificatePage from './pages/CertificatePage';
+import { AdminAuthProvider } from './hooks/useAdminAuth';
+import { RequireAdmin } from './components/RequireAdmin';
+import AdminLoginPage from './pages/admin/AdminLoginPage';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminCohortPage from './pages/admin/AdminCohortPage';
+import AdminSubmissionReviewPage from './pages/admin/AdminSubmissionReviewPage';
+import FinishSignInPage from './pages/FinishSignInPage';
 
 function RequireAuth({ children }) {
   const { student } = useAuth();
@@ -20,6 +27,7 @@ export default function App() {
     >
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/finishSignIn" element={<FinishSignInPage />} />
         <Route
           path="/"
           element={
@@ -34,6 +42,44 @@ export default function App() {
             <RequireAuth>
               <CertificatePage />
             </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/login"
+          element={
+            <AdminAuthProvider>
+              <AdminLoginPage />
+            </AdminAuthProvider>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminAuthProvider>
+              <RequireAdmin>
+                <AdminDashboardPage />
+              </RequireAdmin>
+            </AdminAuthProvider>
+          }
+        />
+        <Route
+          path="/admin/cohorts/:cohortId"
+          element={
+            <AdminAuthProvider>
+              <RequireAdmin>
+                <AdminCohortPage />
+              </RequireAdmin>
+            </AdminAuthProvider>
+          }
+        />
+        <Route
+          path="/admin/submissions/:submissionId"
+          element={
+            <AdminAuthProvider>
+              <RequireAdmin>
+                <AdminSubmissionReviewPage />
+              </RequireAdmin>
+            </AdminAuthProvider>
           }
         />
         <Route path="*" element={<Navigate to="/" replace />} />

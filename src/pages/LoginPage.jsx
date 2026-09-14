@@ -4,13 +4,19 @@ import { useAuth } from '../hooks/useAuth';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
+  const [infoMessage, setInfoMessage] = useState(null);
   const { login, authError, authLoading } = useAuth();
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
     e.preventDefault();
-    const ok = await login(email.trim());
-    if (ok) navigate('/');
+    setInfoMessage(null);
+    const res = await login(email.trim());
+    if (res === true) {
+      navigate('/');
+    } else if (res === 'link_sent') {
+      setInfoMessage('Check your email for a sign-in link.');
+    }
   }
 
   return (
@@ -40,7 +46,10 @@ export default function LoginPage() {
             type="email"
             required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (infoMessage) setInfoMessage(null);
+            }}
             placeholder="you@example.com"
             className="w-full rounded-lg border border-thrive-line px-3.5 py-2.5
                        text-thrive-ink placeholder:text-thrive-ink/30
@@ -51,6 +60,15 @@ export default function LoginPage() {
           {authError && (
             <p className="mt-3 text-sm text-red-600" role="alert">
               {authError}
+            </p>
+          )}
+
+          {infoMessage && (
+            <p
+              className="mt-3 rounded-lg border border-thrive-accent/30 bg-thrive-accent/10 px-3.5 py-2.5 text-sm text-thrive-ink"
+              role="status"
+            >
+              {infoMessage}
             </p>
           )}
 

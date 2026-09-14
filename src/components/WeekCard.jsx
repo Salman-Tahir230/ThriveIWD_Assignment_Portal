@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { submitAssignment, mockGradeSubmission } from '../mock/mockReader';
+import { percentageToLetterGrade } from '../utils/letterGrade';
 
 const ACCEPTED_TYPES = ['.pdf', '.docx'];
 
@@ -30,6 +31,7 @@ function FileUploadForm({ assignment, studentId, onSubmitted }) {
         studentId,
         assignment,
         fileName: file.name,
+        file,
       });
       onSubmitted(submission);
     } finally {
@@ -157,7 +159,7 @@ export default function WeekCard({ week, studentId, onSubmitted }) {
                 {submission.fileName}
               </span>
               <span className="font-display text-lg font-semibold text-thrive-sage">
-                {submission.score}%
+                {submission.score}% &middot; {percentageToLetterGrade(submission.score)}
               </span>
             </div>
           )}
