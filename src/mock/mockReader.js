@@ -120,7 +120,7 @@ export async function submitAssignment({ studentId, assignment, fileName, file }
   
   let fileUrl = null;
   if (storage && file) {
-    const storageRef = ref(storage, `submissions/${studentId}/${Date.now()}_${fileName}`);
+    const storageRef = ref(storage, `submissions/${studentId}/${assignment.id}/${fileName}`);
     const snapshot = await uploadBytes(storageRef, file);
     fileUrl = await getDownloadURL(snapshot.ref);
   }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
 import {
   getSubmission,
@@ -108,15 +108,16 @@ export default function AdminSubmissionReviewPage() {
         throw new Error('Unsupported file type');
       }
 
-      // 3. Call Anthropic
+      // 3. Call Groq
       const checklist = assignment.checklist || DEFAULT_CHECKLIST;
       
-      const anthropic = new Anthropic({
-        apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
-        dangerouslyAllowBrowser: true,
+      const groq = new OpenAI({
+        apiKey: import.meta.env.VITE_GROQ_API_KEY,
+        baseURL: 'https://api.groq.com/openai/v1',
+        dangerouslyAllowBrowser: true, // same client-side caveat as before — flag this in your summary same as the Anthropic version did
       });
 
-      const prompt = `
+      const basePrompt = `
 You are an expert grader. Grade the following submission based on the provided assignment brief and checklist.
 
 Assignment Brief:
@@ -139,24 +140,49 @@ Respond ONLY with valid JSON in the exact following structure, with no markdown 
 }
       `;
 
-      const msg = await anthropic.messages.create({
-        model: "claude-3-haiku-20240307",
-        max_tokens: 1000,
-        temperature: 0,
-        messages: [{ role: "user", content: prompt }]
-      });
+      const extractAndParseJson = (rawContent) => {
+        if (!rawContent || typeof rawContent !== 'string') {
+          throw new Error('Empty response from AI model');
+        }
+        let jsonString = rawContent.trim();
+        if (jsonString.includes('```json')) {
+          jsonString = jsonString.split('```json')[1].split('```')[0];
+        } else if (jsonString.includes('```')) {
+          jsonString = jsonString.split('```')[1].split('```')[0];
+        }
+        const parsedData = JSON.parse(jsonString.trim());
+        if (!parsedData || !Array.isArray(parsedData.breakdown)) {
+          throw new Error('Invalid JSON structure: missing breakdown array');
+        }
+        return parsedData;
+      };
 
-      const responseText = msg.content[0].text;
-      
-      // Attempt to parse JSON (handling potential markdown formatting if the model disobeys)
-      let jsonString = responseText;
-      if (jsonString.includes('```json')) {
-        jsonString = jsonString.split('```json')[1].split('```')[0];
-      } else if (jsonString.includes('```')) {
-        jsonString = jsonString.split('```')[1].split('```')[0];
+      const modelName = import.meta.env.VITE_GROQ_MODEL || 'openai/gpt-oss-120b';
+
+      const callGroq = async (promptText) => {
+        const completion = await groq.chat.completions.create({
+          model: modelName,
+          temperature: 0,
+          messages: [{ role: 'user', content: promptText }]
+        });
+        return completion.choices[0]?.message?.content || '';
+      };
+
+      let parsed = null;
+      const initialResponseText = await callGroq(basePrompt);
+      try {
+        parsed = extractAndParseJson(initialResponseText);
+      } catch (firstErr) {
+        console.warn('Initial AI response parsing failed, retrying once with strict instructions...', firstErr);
+        const retryPrompt = `${basePrompt}\n\nRespond with ONLY the JSON object, no markdown code fences, no explanation text before or after it.`;
+        const retryResponseText = await callGroq(retryPrompt);
+        try {
+          parsed = extractAndParseJson(retryResponseText);
+        } catch (secondErr) {
+          console.error('AI response parse failed on retry:', secondErr);
+          throw new Error('AI grading response could not be parsed — try again or grade manually');
+        }
       }
-      
-      const parsed = JSON.parse(jsonString.trim());
       
       // Calculate total score
       let totalScore = 0;
@@ -180,7 +206,9 @@ Respond ONLY with valid JSON in the exact following structure, with no markdown 
 
     } catch (err) {
       console.error('AI Check failed:', err);
-      alert('Failed to check with AI: ' + err.message);
+      alert(err.message.includes('AI grading response could not be parsed')
+        ? err.message
+        : 'Failed to check with AI: ' + err.message);
     } finally {
       setAiChecking(false);
     }
@@ -316,7 +344,7 @@ Respond ONLY with valid JSON in the exact following structure, with no markdown 
                     )}
                   </button>
                   {!submission.fileUrl && (
-                    <p className="text-xs text-red-500 mt-2">Cannot check: File URL missing.</p>
+                    <p className="text-xs text-red-500 mt-2">This submission predates file storage — ask the student to resubmit.</p>
                   )}
                 </div>
               ) : (
