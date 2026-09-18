@@ -1,12 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { auth } from '../firebase/config';
+import { auth, db } from '../firebase/config';
 import {
-  sendSignInLinkToEmail,
-  isSignInWithEmailLink,
-  signInWithEmailLink,
+  GoogleAuthProvider,
+  signInWithPopup,
   onAuthStateChanged,
   signOut,
 } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { getStudentByEmail, getOrCreateStudentByEmail } from '../mock/mockReader';
 
 const AuthContext = createContext(null);
@@ -61,7 +61,7 @@ export function AuthProvider({ children }) {
     };
   }, [lookupStudent]);
 
-  const login = useCallback(async (email) => {
+  const login = useCallback(async (cohortId) => {
     setAuthLoading(true);
     setAuthError(null);
     try {
@@ -70,28 +70,28 @@ export function AuthProvider({ children }) {
           'Firebase Auth is not initialized. Please check your .env.local file.'
         );
       }
-      // Validate that student registration exists (or create one if allowed) before sending sign-in link
-      const found = await getOrCreateStudentByEmail(email);
 
-      // Dev-only flag, set in .env.local, never to be set in any deployed/hosted
-      // environment's config — it skips proof of inbox ownership entirely.
-      if (import.meta.env.VITE_SKIP_EMAIL_LINK === 'true') {
-        setStudent(found);
-        window.localStorage.setItem('activeStudentEmail', found.email);
-        setAuthError(null);
-        return true;
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const email = result.user.email.toLowerCase();
+
+      // Check allowlist
+      const allowlistRef = doc(db, 'cohorts', cohortId, 'allowedEmails', email);
+      const allowlistSnap = await getDoc(allowlistRef);
+      if (!allowlistSnap.exists()) {
+        await signOut(auth);
+        setAuthError("This email isn't registered for the selected cohort.");
+        return false;
       }
 
-      const actionCodeSettings = {
-        url: window.location.origin + '/finishSignIn',
-        handleCodeInApp: true,
-      };
-      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-      window.localStorage.setItem('emailForSignIn', email);
+      const found = await getOrCreateStudentByEmail(email, cohortId);
+
+      setStudent(found);
+      window.localStorage.setItem('activeStudentEmail', found.email);
       setAuthError(null);
-      return 'link_sent';
+      return true;
     } catch (err) {
-      setAuthError(err.message || 'Failed to send sign-in link.');
+      setAuthError(err.message || 'Failed to sign in.');
       return false;
     } finally {
       setAuthLoading(false);

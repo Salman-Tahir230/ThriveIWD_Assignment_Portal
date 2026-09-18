@@ -9,6 +9,7 @@ import AdminLoginPage from './pages/admin/AdminLoginPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminCohortPage from './pages/admin/AdminCohortPage';
 import AdminSubmissionReviewPage from './pages/admin/AdminSubmissionReviewPage';
+import AdminUploadEmailsPage from './pages/admin/AdminUploadEmailsPage';
 import FinishSignInPage from './pages/FinishSignInPage';
 
 function RequireAuth({ children }) {
@@ -78,6 +79,16 @@ export default function App() {
             <AdminAuthProvider>
               <RequireAdmin>
                 <AdminSubmissionReviewPage />
+              </RequireAdmin>
+            </AdminAuthProvider>
+          }
+        />
+        <Route
+          path="/admin/upload-emails"
+          element={
+            <AdminAuthProvider>
+              <RequireAdmin>
+                <AdminUploadEmailsPage />
               </RequireAdmin>
             </AdminAuthProvider>
           }

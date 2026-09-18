@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
 import { getAllCohorts, getStudentCountForCohort, createCohort } from '../../mock/mockReader';
+import ManageAdmins from '../../components/ManageAdmins';
 
 export default function AdminDashboardPage() {
   const { admin, logout } = useAdminAuth();
@@ -95,12 +96,20 @@ export default function AdminDashboardPage() {
             <h1 className="font-display text-2xl font-semibold text-thrive-ink">Cohorts</h1>
             <p className="text-thrive-ink/60 mt-1">Manage cohorts, assignments, and grade submissions.</p>
           </div>
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="px-4 py-2 bg-thrive-accent text-white font-medium rounded-lg hover:bg-thrive-accent/90 transition"
-          >
-            + New Cohort
-          </button>
+          <div className="flex gap-3">
+            <Link
+              to="/admin/upload-emails"
+              className="px-4 py-2 bg-thrive-ink text-white font-medium rounded-lg hover:bg-thrive-ink/90 transition"
+            >
+              Upload Emails
+            </Link>
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="px-4 py-2 bg-thrive-accent text-white font-medium rounded-lg hover:bg-thrive-accent/90 transition"
+            >
+              + New Cohort
+            </button>
+          </div>
         </div>
 
         {showCreateForm && (
@@ -239,6 +248,10 @@ export default function AdminDashboardPage() {
             </table>
           </div>
         )}
+
+        <div className="mt-12">
+          <ManageAdmins />
+        </div>
       </main>
     </div>
   );

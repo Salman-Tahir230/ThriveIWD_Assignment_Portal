@@ -42,25 +42,33 @@ export async function getStudentByEmail(email) {
   return sanitizeDoc(snap.docs[0]);
 }
 
-export async function getOrCreateStudentByEmail(email) {
+export async function getOrCreateStudentByEmail(email, selectedCohortId = null) {
   const existing = await getStudentByEmail(email);
   if (existing) return existing;
 
-  const defaultCohortQuery = query(
-    collection(db, 'cohorts'),
-    where('isDefault', '==', true),
-    limit(1)
-  );
-  const snap = await getDocs(defaultCohortQuery);
-  if (snap.empty) {
-    throw new Error('No default cohort configured — cannot auto-enroll.');
+  let cohort;
+  if (selectedCohortId) {
+    cohort = await getCohort(selectedCohortId);
+    if (!cohort) {
+      throw new Error('Selected cohort not found.');
+    }
+  } else {
+    const defaultCohortQuery = query(
+      collection(db, 'cohorts'),
+      where('isDefault', '==', true),
+      limit(1)
+    );
+    const snap = await getDocs(defaultCohortQuery);
+    if (snap.empty) {
+      throw new Error('No default cohort configured — cannot auto-enroll.');
+    }
+    cohort = { id: snap.docs[0].id, ...snap.docs[0].data() };
   }
-  const cohort = { id: snap.docs[0].id, ...snap.docs[0].data() };
 
   const displayName = email
     .split('@')[0]
     .replace(/[._]+/g, ' ')
-    .replace(/\\b\\w/g, (c) => c.toUpperCase());
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 
   const newStudent = {
     participantId: null, // unknown — no Sheets link yet
